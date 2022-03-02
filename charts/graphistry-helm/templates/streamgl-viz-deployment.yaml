@@ -15,7 +15,14 @@ spec:
     matchLabels:
       io.kompose.service: streamgl-viz
   strategy:
+{{ if eq .Values.rollingUpdate true }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: "25%"
+      maxUnavailable: "0%"
+{{ else }}
     type: Recreate
+{{- end }}
   template:
     metadata:
       annotations:
@@ -49,10 +56,17 @@ spec:
           ports:
             - containerPort: 8080
           resources: {}
+          volumeMounts:
+            - mountPath: /opt/graphistry/data
+              name: data-mount
       restartPolicy: {{ .Values.restartPolicy }}
+      volumes:
+        - name: data-mount
+          persistentVolumeClaim:
+            claimName: data-mount
       imagePullSecrets:
           - name: {{ .Values.imagePullSecrets }} 
-{{- if .Values.nodeSelector }}
+{{ if eq .Values.multiNode false }}
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
 {{- end }} 
 status: {}

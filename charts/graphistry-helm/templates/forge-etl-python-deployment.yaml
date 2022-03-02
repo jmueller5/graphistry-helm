@@ -15,7 +15,14 @@ spec:
     matchLabels:
       io.kompose.service: forge-etl-python
   strategy:
+{{ if eq .Values.rollingUpdate true }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: "25%"
+      maxUnavailable: "0%"
+{{ else }}
     type: Recreate
+{{- end }}
   template:
     metadata:
       annotations:
@@ -51,22 +58,20 @@ spec:
           resources: {}
           volumeMounts:
             - mountPath: /opt/graphistry/data
-              name: forge-etl-python-claim0
+              name: data-mount
             - mountPath: /opt/graphistry/data/uploads
               name: uploads-files
       restartPolicy: {{ .Values.restartPolicy }}
       volumes:
-        - name: forge-etl-python-claim0
+        - name: data-mount
           persistentVolumeClaim:
-            claimName: forge-etl-python-claim0
+            claimName: data-mount
         - name: uploads-files
           persistentVolumeClaim:
             claimName: uploads-files
       imagePullSecrets:
           - name: {{ .Values.imagePullSecrets }} 
-{{- if .Values.nodeSelector }}
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
-{{- end }}  
 status: {}
 
 ---
@@ -95,19 +100,3 @@ status:
 
 ---
 
-#volumes
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  creationTimestamp: null
-  labels:
-    io.kompose.service: forge-etl-python-claim0
-  name: forge-etl-python-claim0
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-status: {}

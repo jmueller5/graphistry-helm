@@ -15,7 +15,14 @@ spec:
     matchLabels:
       io.kompose.service: pivot
   strategy:
+{{ if eq .Values.rollingUpdate true }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: "25%"
+      maxUnavailable: "0%"
+{{ else }}
     type: Recreate
+{{- end }}
   template:
     metadata:
       annotations:
@@ -54,6 +61,10 @@ spec:
               subPath: config.json
               name: pivot-config-volume
               readOnly: true
+            - mountPath: /opt/graphistry/data
+              name: data-mount
+            - mountPath: /opt/graphistry/apps/core/pivot/data
+              name: data-mount
       volumes:
         - name: pivot-config-volume
           configMap:
@@ -61,11 +72,13 @@ spec:
             items:
               - key: config.json
                 path: config.json
-
+        - name: data-mount
+          persistentVolumeClaim:
+            claimName: data-mount
       restartPolicy: {{ .Values.restartPolicy }}
       imagePullSecrets:
           - name: {{ .Values.imagePullSecrets }}  
-{{- if .Values.nodeSelector }}
+{{ if eq .Values.multiNode false }}
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
 {{- end }} 
 status: {}

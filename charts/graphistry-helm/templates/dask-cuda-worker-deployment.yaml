@@ -15,7 +15,14 @@ spec:
     matchLabels:
       io.kompose.service: dask-cuda-worker
   strategy:
+{{ if eq .Values.rollingUpdate true }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: "25%"
+      maxUnavailable: "0%"
+{{ else }}
     type: Recreate
+{{- end }}
   template:
     metadata:
       annotations:
@@ -62,58 +69,19 @@ spec:
           resources: {}
           volumeMounts:
             - mountPath: /opt/graphistry/data
-              name: dask-cuda-worker-claim0
+              name: data-mount
             - mountPath: /dask-shared
-              name: dask-cuda-worker-claim1
+              name: data-mount
       restartPolicy: {{ .Values.restartPolicy }}
       volumes:
-        - name: dask-cuda-worker-claim0
+        - name: data-mount
           persistentVolumeClaim:
-            claimName: dask-cuda-worker-claim0
-        - name: dask-cuda-worker-claim1
-          persistentVolumeClaim:
-            claimName: dask-cuda-worker-claim1
+            claimName: data-mount
       imagePullSecrets:
           - name: {{ .Values.imagePullSecrets }}  
-{{- if .Values.nodeSelector }}
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
-{{- end }} 
-status: {}
-
-
-#volumes 
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  creationTimestamp: null
-  labels:
-    io.kompose.service: dask-cuda-worker-claim0
-  name: dask-cuda-worker-claim0
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
 status: {}
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  creationTimestamp: null
-  labels:
-    io.kompose.service: dask-cuda-worker-claim1
-  name: dask-cuda-worker-claim1
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-status: {}
----
-
 #service
 apiVersion: v1
 kind: Service
